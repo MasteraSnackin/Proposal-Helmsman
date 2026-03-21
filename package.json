@@ -1,0 +1,17 @@
+{
+  "name": "proposal-helmsman",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --experimental-strip-types openclaw/examples/dev-server.ts",
+    "skill": "node --experimental-strip-types openclaw/examples/run-skill.ts",
+    "agent": "node --experimental-strip-types openclaw/examples/run-agent.ts",
+    "test": "node --experimental-strip-types --test openclaw/tests/**/*.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.10",
+    "typescript": "^5.8.2"
+  }
+}

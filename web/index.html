@@ -1,0 +1,387 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <title>Proposal Helmsman</title>
+    <meta
+      name="description"
+      content="Proposal Helmsman turns pasted RFPs into safe proposal drafts with OpenClaw-style operator flows and Civic guardrails."
+    />
+    <link rel="stylesheet" href="/app.css" />
+  </head>
+  <body>
+    <div class="chart-grid" aria-hidden="true"></div>
+    <div class="ambient ambient-a"></div>
+    <div class="ambient ambient-b"></div>
+    <div class="ambient ambient-c"></div>
+    <div class="shell">
+      <aside class="sidebar glass">
+        <div class="brand-block">
+          <div class="brand-topline">
+            <p class="eyebrow">Proposal Helmsman</p>
+            <span class="brand-seal">PH</span>
+          </div>
+          <h1 class="brand-title">
+            <span class="kinetic">Proposal</span>
+            <span class="kinetic">Bridge</span>
+          </h1>
+          <p class="muted brand-copy">
+            A deliberate command deck for turning raw RFP text into safe, review-first proposal drafts.
+          </p>
+          <div class="brand-ribbon">
+            <span>Slack-native</span>
+            <span>Guarded</span>
+            <span>Thread-scoped</span>
+          </div>
+        </div>
+
+        <section class="sidebar-group">
+          <div class="group-head">
+            <span>Operate</span>
+            <button
+              id="new-workspace-button"
+              class="ghost-button"
+              type="button"
+              aria-expanded="false"
+              aria-controls="workspace-create-panel"
+              aria-haspopup="dialog"
+            >
+              New Workspace
+            </button>
+          </div>
+          <div
+            id="workspace-create-panel"
+            class="popover hidden"
+            role="dialog"
+            aria-label="Create workspace"
+            aria-hidden="true"
+          >
+            <label class="field">
+              <span class="field-label">Workspace label</span>
+              <input
+                id="workspace-name-input"
+                class="input-panel"
+                type="text"
+                placeholder="e.g. acme-bid-thread"
+              />
+            </label>
+            <button id="confirm-create-button" class="primary-button" type="button">
+              Create
+            </button>
+          </div>
+          <div id="workspace-list" class="workspace-list" aria-live="polite"></div>
+          <p class="sidebar-footnote">
+            Each workspace mirrors a proposal thread, so operator progress stays auditable and contained.
+          </p>
+        </section>
+
+        <section class="sidebar-group">
+          <div class="group-head">
+            <span>Trust</span>
+          </div>
+          <div class="quiet-stack">
+            <div class="mini-card">
+              <span class="mini-label">Model</span>
+              <strong id="model-badge">Loading...</strong>
+            </div>
+            <div class="mini-card">
+              <span class="mini-label">Guardrails</span>
+              <strong id="guardrail-badge">Loading...</strong>
+            </div>
+          </div>
+        </section>
+
+        <section class="sidebar-group">
+          <div class="group-head">
+            <span>Quick Edit</span>
+          </div>
+          <div class="popover-host">
+            <button
+              id="focus-popover-toggle"
+              class="secondary-button"
+              type="button"
+              aria-expanded="false"
+              aria-controls="focus-popover"
+              aria-haspopup="dialog"
+            >
+              Emphasis Presets
+            </button>
+            <div
+              id="focus-popover"
+              class="popover hidden"
+              role="dialog"
+              aria-label="Quick emphasis presets"
+              aria-hidden="true"
+            >
+              <button class="chip-button" data-emphasis="security and compliance">Security</button>
+              <button class="chip-button" data-emphasis="delivery confidence and milestones">Delivery</button>
+              <button class="chip-button" data-emphasis="commercial prudence and risk control">Commercials</button>
+              <button class="chip-button" data-emphasis="team credibility and enterprise experience">Team</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="sidebar-group sidebar-group-quiet">
+          <div class="group-head">
+            <span>Operator Lens</span>
+          </div>
+          <div class="operator-note">
+            <strong>Review-first drafting</strong>
+            <p class="muted">
+              The dashboard is tuned for rapid operator flow: scan, shape, stress-test, then export.
+            </p>
+          </div>
+        </section>
+      </aside>
+
+      <main class="main-stage">
+        <header class="hero glass">
+          <div class="hero-grid">
+            <div class="hero-copy-block">
+              <div class="signal-row">
+                <span class="signal-chip">2026 design pass</span>
+                <span class="signal-chip">Bento control deck</span>
+                <span class="signal-chip">Glass + paper contrast</span>
+              </div>
+              <div>
+                <p class="eyebrow">Main Dashboard</p>
+                <h2 class="hero-title">
+                  <span class="kinetic">Scan</span>
+                  <span class="kinetic">Shape</span>
+                  <span class="kinetic">Deliver</span>
+                </h2>
+                <p class="hero-copy">
+                  Proposal Helmsman now reads like an operator bridge instead of a utility panel: editorial where it should be calm, instrumented where it should be exact.
+                </p>
+              </div>
+              <div class="hero-rail">
+                <div class="rail-card">
+                  <span class="mini-label">Flow</span>
+                  <strong>Ingest -> draft -> export</strong>
+                </div>
+                <div class="rail-card">
+                  <span class="mini-label">Risk posture</span>
+                  <strong>Commitments stay review-first</strong>
+                </div>
+              </div>
+            </div>
+            <div class="hero-aside">
+              <div class="hero-status">
+                <div class="status-pill">
+                  <span>Workspace</span>
+                  <strong id="hero-workspace">Loading...</strong>
+                </div>
+                <div class="status-pill">
+                  <span>Mode</span>
+                  <strong id="hero-mode">Loading...</strong>
+                </div>
+                <div class="status-pill">
+                  <span>Updated</span>
+                  <strong id="hero-updated">Loading...</strong>
+                </div>
+              </div>
+              <div class="hero-panel">
+                <p class="eyebrow">Command Posture</p>
+                <p class="hero-panel-copy">
+                  Designed to keep human judgment visible while the operator does the heavy lifting.
+                </p>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <div id="notice-bar" class="notice hidden" role="status" aria-live="polite"></div>
+
+        <section class="bento-grid">
+          <article class="card card-ingest glass tone-sea">
+            <div class="card-head">
+              <div>
+                <p class="eyebrow">1. Ingest</p>
+                <h3>RFP Intake</h3>
+              </div>
+              <button id="load-sample-button" class="ghost-button" type="button">
+                Load Sample
+              </button>
+            </div>
+            <label class="field-label" for="rfp-input">Paste RFP text</label>
+            <textarea
+              id="rfp-input"
+              class="text-panel"
+              rows="12"
+              placeholder="Paste the RFP text here to create or refresh the active workspace."
+            ></textarea>
+            <div class="action-row">
+              <button id="parse-button" class="primary-button" type="button">
+                Parse RFP
+              </button>
+              <button id="plan-button" class="secondary-button" type="button">
+                Replan Structure
+              </button>
+              <button id="refresh-button" class="secondary-button" type="button">
+                Refresh Status
+              </button>
+            </div>
+            <p class="muted" id="parse-helper">
+              Tip: use Ctrl/Cmd + Enter to parse immediately.
+            </p>
+          </article>
+
+          <article class="card card-pulse glass tone-ink">
+            <div class="card-head">
+              <div>
+                <p class="eyebrow">2. Pulse</p>
+                <h3>Operator State</h3>
+              </div>
+            </div>
+            <div id="pulse-panel" class="metric-stack"></div>
+            <div class="card-subhead">
+              <span>Recent activity</span>
+            </div>
+            <div id="activity-log" class="activity-log" aria-live="polite"></div>
+          </article>
+
+          <article class="card card-coverage glass tone-citrine">
+            <div class="card-head">
+              <div>
+                <p class="eyebrow">3. Coverage</p>
+                <h3>Requirement Tracker</h3>
+              </div>
+              <button id="coverage-button" class="ghost-button" type="button">
+                Update Coverage
+              </button>
+            </div>
+            <div id="coverage-summary" class="coverage-summary"></div>
+            <div id="requirements-list" class="scroll-list"></div>
+          </article>
+
+          <article class="card card-structure glass tone-graphite">
+            <div class="card-head">
+              <div>
+                <p class="eyebrow">4. Structure</p>
+                <h3>Proposal Map</h3>
+              </div>
+            </div>
+            <div id="section-list" class="section-list"></div>
+          </article>
+
+          <article class="card card-draft glass tone-sand">
+            <div class="card-head">
+              <div>
+                <p class="eyebrow">5. Draft & Revise</p>
+                <h3>Section Workshop</h3>
+              </div>
+            </div>
+            <div class="field-grid">
+              <label class="field">
+                <span class="field-label">Section</span>
+                <select id="section-select" class="select-panel"></select>
+              </label>
+              <label class="field">
+                <span class="field-label">Optional emphasis</span>
+                <input
+                  id="emphasis-input"
+                  class="input-panel"
+                  type="text"
+                  placeholder="e.g. security and delivery assurance"
+                />
+              </label>
+            </div>
+            <div class="action-row">
+              <button id="draft-button" class="primary-button" type="button">
+                Draft Section
+              </button>
+            </div>
+            <label class="field-label" for="revision-input">Revision instruction</label>
+            <textarea
+              id="revision-input"
+              class="text-panel compact"
+              rows="4"
+              placeholder="Ask for a safer, shorter, stronger, or more specific revision."
+            ></textarea>
+            <div class="action-row">
+              <button id="revise-button" class="secondary-button" type="button">
+                Revise Draft
+              </button>
+            </div>
+            <div class="preview-panel">
+              <div class="preview-head">
+                <span>Current section preview</span>
+              </div>
+              <pre id="section-preview" class="preview-text"></pre>
+            </div>
+          </article>
+
+          <article class="card card-export glass tone-pine">
+            <div class="card-head">
+              <div>
+                <p class="eyebrow">6. Export</p>
+                <h3>Combined Proposal</h3>
+              </div>
+              <div class="action-row action-row-tight">
+                <button id="download-export-button" class="ghost-button" type="button">
+                  Download .md
+                </button>
+                <button id="export-button" class="primary-button" type="button">
+                  Export Proposal
+                </button>
+              </div>
+            </div>
+            <div class="preview-panel proposal-panel">
+              <pre id="proposal-preview" class="preview-text"></pre>
+            </div>
+          </article>
+
+          <article class="card card-trust glass tone-clay">
+            <div class="card-head">
+              <div>
+                <p class="eyebrow">7. Trust</p>
+                <h3>Guardrail Notes</h3>
+              </div>
+              <button id="reset-button" class="ghost-button danger" type="button">
+                Reset Workspace
+              </button>
+            </div>
+            <div class="trust-grid">
+              <div id="trust-note" class="activity-item trust-note-panel"></div>
+              <ul class="trust-list">
+                <li>Unsafe asks are blocked before they touch draft content.</li>
+                <li>Risky wording can be rewritten before it lands in proposal files.</li>
+                <li>Exports stay review-first and human-controlled.</li>
+              </ul>
+              <div class="trust-summary">
+                <span class="mini-label">Design intent</span>
+                <strong>Calm enough for review, sharp enough for decision-making.</strong>
+              </div>
+            </div>
+          </article>
+        </section>
+      </main>
+    </div>
+
+    <div id="modal-backdrop" class="modal-backdrop hidden" role="presentation" aria-hidden="true">
+      <div class="modal glass" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <p class="eyebrow">High Commitment</p>
+        <h3 id="modal-title">Reset Active Workspace?</h3>
+        <p class="muted">
+          This clears the current workspace files so you can start the thread again from a clean state.
+        </p>
+        <div class="action-row">
+          <button id="cancel-reset-button" class="secondary-button" type="button">
+            Cancel
+          </button>
+          <button id="confirm-reset-button" class="primary-button danger" type="button">
+            Confirm Reset
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div id="toast-region" class="toast-region" aria-live="polite" aria-atomic="true"></div>
+
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

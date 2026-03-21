@@ -1,0 +1,7 @@
+Acme Borough Council is seeking a delivery partner to design and deliver a proposal workflow assistant for internal bid teams.
+
+The solution must operate through Slack for day-to-day collaboration and should support thread-based workspaces for each tender response. Vendors must summarise pasted RFP text, extract mandatory and optional requirements, and plan a proposal structure covering executive summary, solution, delivery, team, security, and commercials.
+
+The proposal operator should draft sections on request, revise content based on reviewer feedback, and maintain a checklist showing which RFP requirements are covered by the current draft. The system must protect sensitive client and project information, and it shall not invent fixed pricing, legal guarantees, or unapproved commercial terms.
+
+Suppliers should describe how data privacy and security controls will be handled. Experience with AI workflow tooling, enterprise delivery, and compliance-aware proposal processes is preferred.

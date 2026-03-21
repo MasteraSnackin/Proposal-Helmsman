@@ -1,0 +1,26 @@
+# TODO: Adapt this file to the exact OpenClaw agent schema used in your runtime.
+name: proposal-operator
+description: Proposal Helmsman Slack-native proposal operator
+model:
+  provider: ${OPENCLAW_MODEL_PROVIDER:-google}
+  id: ${OPENCLAW_MODEL:-gemini-2.5-flash}
+  temperature: ${OPENCLAW_TEMPERATURE:-0.4}
+workspace_root: ./workspaces/proposals
+soul: ./openclaw/agents/proposal-operator/SOUL.md
+skills:
+  - name: parse_rfp
+    module: ./openclaw/skills/proposal-operator/parse_rfp.ts
+  - name: plan_proposal_structure
+    module: ./openclaw/skills/proposal-operator/plan_proposal_structure.ts
+  - name: draft_section
+    module: ./openclaw/skills/proposal-operator/draft_section.ts
+  - name: revise_section
+    module: ./openclaw/skills/proposal-operator/revise_section.ts
+  - name: update_checklist_coverage
+    module: ./openclaw/skills/proposal-operator/update_checklist_coverage.ts
+  - name: export_proposal
+    module: ./openclaw/skills/proposal-operator/export_proposal.ts
+  - name: generate_audio_briefing
+    module: ./openclaw/skills/proposal-operator/generate_audio_briefing.ts
+  - name: workspace_status
+    module: ./openclaw/skills/proposal-operator/workspace_status.ts
