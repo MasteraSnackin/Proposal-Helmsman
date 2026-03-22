@@ -23,7 +23,7 @@ Proposal Helmsman is a multi‑platform AI proposal operator, built on top of Op
 
 ## Features
 
-- Slack-first proposal workflow with thread-to-workspace mapping.
+- Multi‑platform  proposal workflow with thread-to-workspace mapping.
 - Local browser dashboard for RFP intake, drafting, coverage review, trust state, and export.
 - OpenClaw-style `proposal-operator` runtime with skill-based orchestration.
 - RFP parsing into summary and structured requirement checklist data.
@@ -65,7 +65,7 @@ flowchart LR
   Skills --> Audio[ElevenLabs or Mock Audio]
 ```
 
-Proposal Helmsman exposes the same workflow through Slack, a browser dashboard, and CLI entrypoints. Requests are routed through the proposal operator, which coordinates skill modules, persists workspace artefacts, and calls external model, guardrail, and audio services when they are configured.
+Proposal Helmsman exposes the same workflow through multi‑platform channel like telegram, slack, whatsapp, a browser dashboard, and CLI entrypoints. Requests are routed through the proposal operator, which coordinates skill modules, persists workspace artefacts, and calls external model, guardrail, and audio services when they are configured.
 
 ## Installation
 
@@ -319,8 +319,6 @@ Add a root `LICENSE` file and replace the placeholder above before public releas
 - Maintainer: `MasteraSnackin`
 - GitHub: https://github.com/MasteraSnackin
 - Repository: https://github.com/MasteraSnackin/Proposal-Helmsman
-- Website: `<ADD_WEBSITE_URL>`
-- Email: `<ADD_EMAIL_ADDRESS>`
 
 For support, bug reports, or feature requests, use the issue tracker:
 
