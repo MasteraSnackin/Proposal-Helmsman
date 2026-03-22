@@ -219,11 +219,7 @@ The main runtime settings live in `.env.example` and `openclaw/agents/proposal-o
 
 ## Screenshots / Demo
 
-![Dashboard Placeholder](https://via.placeholder.com/1200x700?text=Proposal+Helmsman+Dashboard)
 <img width="3386" height="2348" alt="image" src="https://github.com/user-attachments/assets/8e84bfdc-c299-4b6e-a7ae-7703e6617e10" />
-
-
-![Workspace Placeholder](https://via.placeholder.com/1200x700?text=Proposal+Workspace+View)
 
 <img width="3388" height="2370" alt="image" src="https://github.com/user-attachments/assets/0a83b623-30f7-42ec-94f6-c9567c46dfc7" />
 
