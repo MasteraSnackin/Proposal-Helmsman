@@ -1,11 +1,4 @@
-# Proposal Helmsman
 
-AI proposal operations for Slack-first teams.
-
-![Build](https://img.shields.io/badge/build-passing-brightgreen)
-![Tests](https://img.shields.io/badge/tests-20%20passing-brightgreen)
-![Runtime](https://img.shields.io/badge/runtime-Node%2024-blue)
-![License](https://img.shields.io/badge/license-ADD%20LICENSE-lightgrey)
 
 ## Description
 
