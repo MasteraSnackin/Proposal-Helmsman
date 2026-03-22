@@ -14,6 +14,7 @@ Proposal Helmsman is a multi‑platform AI proposal operator, built on top of Op
 - [Usage](#usage)
 - [Configuration](#configuration)
 - [Screenshots / Demo](#screenshots--demo)
+- - [Project Diagrams](#project-diagrams)
 - [API / CLI Reference](#api--cli-reference)
 - [Tests](#tests)
 - [Roadmap](#roadmap)
@@ -225,6 +226,30 @@ The main runtime settings live in `.env.example` and `openclaw/agents/proposal-o
 
 - Live demo: `<ADD_LIVE_DEMO_URL>`
 - Local demo URL: `http://127.0.0.1:3000`
+
+## Project Diagrams
+
+- This document provides visual representations of the Proposal Helmsman architecture, data flow, and sequence of operations.
+
+- ### System Flow Diagram
+
+- The following flow diagram illustrates the high-level process from RFP ingestion to final proposal export.
+
+- ```mermaid
+graph TD
+    A[User Input: RFP Text/Slack Thread] --> B{Proposal Operator}
+    B --> C[Parse Skill]
+    C --> D[Generate rfp.json]
+    D --> E[Plan Skill]
+    E --> F[Generate structure.json]
+    F --> G[Draft/Revise Skill]
+    G --> H[Civic Guardrails]
+    H --> I[Generate Sections .md]
+    I --> J[Coverage Skill]
+    J --> K[Update rfp.json Evidence]
+    K --> L[Export Skill]
+    L --> M[Download proposal.md]
+```
 
 ## API / CLI Reference
 
