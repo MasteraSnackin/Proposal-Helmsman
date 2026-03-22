@@ -226,8 +226,6 @@ The main runtime settings live in `.env.example` and `openclaw/agents/proposal-o
 - Live demo: `<ADD_LIVE_DEMO_URL>`
 - Local demo URL: `http://127.0.0.1:3000`
 
-Replace the placeholders above with real screenshots or a deployment URL when available.
-
 ## API / CLI Reference
 
 ### CLI Commands
