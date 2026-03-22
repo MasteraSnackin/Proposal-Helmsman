@@ -1,18 +1,19 @@
 # Proposal Helmsman
 
-AI proposal operations for Slack-first teams, powered by an OpenClaw-style runtime and Civic guardrails.
+AI proposal operations for Slack-first teams.
 
 ![Build](https://img.shields.io/badge/build-passing-brightgreen)
-![Tests](https://img.shields.io/badge/tests-16%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-20%20passing-brightgreen)
 ![Runtime](https://img.shields.io/badge/runtime-Node%2024-blue)
 ![License](https://img.shields.io/badge/license-ADD%20LICENSE-lightgrey)
 
 ## Description
 
-Proposal Helmsman is an MVP for teams that respond to RFPs, tenders, and proposal requests in Slack. It ingests pasted RFP text, extracts requirements, plans a proposal structure, drafts and revises sections, tracks requirement coverage, and exports a combined proposal draft. The project is designed for hackathon and prototype teams that want a fast path to an auditable AI proposal workflow with tool and output guardrails.
+Proposal Helmsman is a Slack-first proposal workflow assistant for teams responding to RFPs, tenders, and bid requests. It turns pasted RFP text into a structured, review-first proposal workspace by extracting requirements, planning sections, drafting content, revising risky language through guardrails, tracking coverage, and exporting a compiled proposal. The project is aimed at hackathon teams, internal bid teams, and prototype builders who need a fast, auditable path from raw solicitation text to a safer draft response.
 
 ## Table of Contents
 
+- [Description](#description)
 - [Features](#features)
 - [Tech Stack](#tech-stack)
 - [Architecture Overview](#architecture-overview)
@@ -30,28 +31,30 @@ Proposal Helmsman is an MVP for teams that respond to RFPs, tenders, and proposa
 ## Features
 
 - Slack-first proposal workflow with thread-to-workspace mapping.
-- OpenClaw-style `proposal-operator` agent with a configurable model client.
+- Local browser dashboard for RFP intake, drafting, coverage review, trust state, and export.
+- OpenClaw-style `proposal-operator` runtime with skill-based orchestration.
 - RFP parsing into summary and structured requirement checklist data.
 - Proposal structure planning for standard response sections.
-- Section drafting and revision workflows with Civic tool and output guardrails.
-- Requirement coverage tracking with evidence extracted from drafted sections.
-- Markdown export for the assembled proposal draft.
-- ElevenLabs-powered audio briefings for summaries, sections, and exported proposal drafts.
-- Local browser dashboard for demoing intake, drafting, coverage, trust state, and export.
+- Draft, revise, and export flows with Civic input, tool, and output guardrails.
+- Requirement coverage tracking with evidence mapped back to drafted sections.
+- Markdown proposal export and downloadable output.
+- ElevenLabs-powered audio briefing generation with deterministic mock mode for local demos.
 - Thin serverless API handlers for Vercel-style deployment targets.
-- Slack request signing verification and duplicate event protection.
+- Signed Slack event handling with duplicate-event protection.
 
 ## Tech Stack
 
-- Node.js 24+
-- TypeScript executed with Node `--experimental-strip-types`
+- Node.js `24+`
+- TypeScript
+- Node `--experimental-strip-types`
+- Plain HTML, CSS, and JavaScript frontend
 - OpenClaw-style local runtime scaffold
 - Gemini-compatible model client
 - Civic guardrails integration
-- Slack Events API compatible handler example
-- Plain HTML, CSS, and JavaScript frontend
-- Node `test` runner for automated coverage
-- Filesystem or Modal-mounted volume storage for workspaces
+- ElevenLabs text-to-speech integration
+- Slack Events API-compatible webhook handler
+- Node built-in `test` runner
+- Local filesystem or Modal-mounted volume workspace storage
 
 ## Architecture Overview
 
@@ -61,55 +64,57 @@ flowchart LR
   User --> WebUI[Local Web Dashboard]
   Slack --> API[Proposal API / Operator Runtime]
   WebUI --> API
-  API --> Agent[proposal-operator Agent]
+  API --> Agent[proposal-operator]
   Agent --> Skills[Proposal Skills]
   Skills --> Storage[(Workspace Storage)]
-  Agent --> Gemini[Gemini or Demo LLM]
-  Skills --> Civic[Civic Guardrails]
+  Agent --> Model[Gemini or Demo LLM]
+  Skills --> Guardrails[Civic Guardrails]
+  Skills --> Audio[ElevenLabs or Mock Audio]
 ```
 
-Proposal Helmsman exposes the same operator workflow through Slack events, a browser dashboard, and CLI entrypoints. The backend routes requests into the `proposal-operator`, which coordinates proposal skills, stores workspace state on disk or a mounted volume, and calls external model and guardrail services when configured.
+Proposal Helmsman exposes the same workflow through Slack, a browser dashboard, and CLI entrypoints. Requests are routed through the proposal operator, which coordinates skill modules, persists workspace artefacts, and calls external model, guardrail, and audio services when they are configured.
 
 ## Installation
 
 ### Prerequisites
 
 - Node.js `24` or newer
-- `npm` for package scripts
-- Optional: Gemini API access
+- `npm`
+- Optional: Gemini API credentials
 - Optional: Civic guardrail endpoint and API key
-- Optional: Slack app credentials for signed event handling
+- Optional: ElevenLabs credentials
+- Optional: Slack app signing secret
 
 ### Setup
 
 1. Clone the repository.
 
 ```bash
-git clone <ADD_REPOSITORY_URL>
-cd proposal-helmsman
+git clone git@github.com:MasteraSnackin/Proposal-Helmsman.git
+cd Proposal-Helmsman
 ```
 
-2. Install development dependencies.
+2. Install dependencies.
 
 ```bash
 npm install
 ```
 
-3. Copy the environment template.
+3. Create your local environment file.
 
 ```bash
 cp .env.example .env
 ```
 
-4. Update `.env` with the credentials and storage settings you want to use.
+4. Update `.env` with the services and storage mode you want to use.
 
-5. Start the local web app.
+5. Start the local dashboard and API server.
 
 ```bash
 npm run dev
 ```
 
-6. Open the local dashboard.
+6. Open the app in your browser.
 
 ```text
 http://127.0.0.1:3000
@@ -123,7 +128,7 @@ http://127.0.0.1:3000
 npm run dev
 ```
 
-The dashboard supports workspace creation, RFP parsing, structure planning, drafting, revision, coverage refresh, export, and markdown download.
+The dashboard supports workspace creation, RFP parsing, structure planning, section drafting, revision, coverage refresh, export, and markdown download.
 
 ### Run the Proposal Operator from the CLI
 
@@ -153,7 +158,7 @@ Draft the executive summary:
 npm run skill -- draft_section ./workspaces/proposals/demo @openclaw/examples/demo/draft-executive-summary.json
 ```
 
-Revise a section through guardrails:
+Revise a section:
 
 ```bash
 npm run skill -- revise_section ./workspaces/proposals/demo @openclaw/examples/demo/modified-revise.json
@@ -165,15 +170,13 @@ Export the combined proposal:
 npm run skill -- export_proposal ./workspaces/proposals/demo
 ```
 
-Generate a narrated summary briefing:
+Generate a narrated briefing:
 
 ```bash
 npm run skill -- generate_audio_briefing ./workspaces/proposals/demo @openclaw/examples/demo/audio-summary.json
 ```
 
 ### Practical API Example
-
-Create or update a workspace through the local API:
 
 ```bash
 curl -X POST http://127.0.0.1:3000/api/message \
@@ -186,7 +189,7 @@ curl -X POST http://127.0.0.1:3000/api/message \
 
 ## Configuration
 
-The project is configured primarily through environment variables and the OpenClaw-style agent config in `openclaw/agents/proposal-operator/config.yaml`.
+The main runtime settings live in `.env.example` and `openclaw/agents/proposal-operator/config.yaml`.
 
 ### Core Environment Variables
 
@@ -195,30 +198,31 @@ The project is configured primarily through environment variables and the OpenCl
 | `OPENCLAW_MODEL_PROVIDER` | Model provider selector | `google` |
 | `OPENCLAW_MODEL` | Model name for the runtime | `gemini-2.5-flash` |
 | `OPENCLAW_TEMPERATURE` | Drafting temperature | `0.4` |
-| `OPENCLAW_MODEL_TIMEOUT_MS` | Model call timeout in milliseconds | `20000` |
+| `OPENCLAW_MODEL_TIMEOUT_MS` | Model timeout in milliseconds | `20000` |
 | `GEMINI_API_KEY` | Gemini API key | `<ADD_GEMINI_API_KEY>` |
 | `CIVIC_GUARD_URL` | Civic guardrail endpoint base URL | `https://your-civic-guard.example` |
 | `CIVIC_API_KEY` | Civic API key | `<ADD_CIVIC_API_KEY>` |
 | `CIVIC_MOCK_MODE` | Use mock guardrail behavior for demos | `true` |
+| `CIVIC_FAIL_OPEN` | Allow requests if Civic fails | `false` |
 | `CIVIC_GUARD_TIMEOUT_MS` | Civic timeout in milliseconds | `8000` |
-| `SLACK_SIGNING_SECRET` | Slack request signing secret | `<ADD_SLACK_SIGNING_SECRET>` |
+| `SLACK_SIGNING_SECRET` | Slack signing secret | `<ADD_SLACK_SIGNING_SECRET>` |
 | `ELEVENLABS_API_KEY` | ElevenLabs API key | `<ADD_ELEVENLABS_API_KEY>` |
 | `ELEVENLABS_VOICE_ID` | ElevenLabs voice identifier | `<ADD_ELEVENLABS_VOICE_ID>` |
-| `ELEVENLABS_MODEL_ID` | ElevenLabs text-to-speech model | `eleven_multilingual_v2` |
+| `ELEVENLABS_MODEL_ID` | ElevenLabs model identifier | `eleven_multilingual_v2` |
 | `ELEVENLABS_OUTPUT_FORMAT` | ElevenLabs output format | `mp3_44100_128` |
 | `ELEVENLABS_TIMEOUT_MS` | ElevenLabs timeout in milliseconds | `20000` |
-| `ELEVENLABS_MOCK_MODE` | Use deterministic local mock audio | `true` |
-| `PROPOSAL_STORAGE_MODE` | Storage mode | `local` or `modal` |
+| `ELEVENLABS_MOCK_MODE` | Use deterministic mock audio locally | `true` |
+| `PROPOSAL_STORAGE_MODE` | Workspace storage mode | `local` or `modal` |
 | `PROPOSAL_WORKSPACE_ROOT` | Override workspace root | `/absolute/path/to/workspaces` |
-| `MODAL_VOLUME_PATH` | Mounted volume base path for durable storage | `/vol/proposal-helmsman` |
+| `MODAL_VOLUME_PATH` | Mounted Modal volume base path | `/vol/proposal-helmsman` |
 
 ### Notes
 
 - If `GEMINI_API_KEY` is not set, the runtime falls back to the deterministic demo LLM.
-- If `CIVIC_MOCK_MODE=true`, Civic behavior is simulated for local demos.
-- If ElevenLabs credentials are missing or `ELEVENLABS_MOCK_MODE=true`, audio generation falls back to a deterministic mock WAV artefact for local testing.
-- The Slack handler fails closed unless `SLACK_SIGNING_SECRET` is set.
-- Health checks report the active storage mode and workspace root posture.
+- If `CIVIC_MOCK_MODE=true`, guardrails are simulated for local demos.
+- If ElevenLabs credentials are missing or `ELEVENLABS_MOCK_MODE=true`, audio generation falls back to a deterministic mock WAV artefact.
+- The Slack handler fails closed unless `SLACK_SIGNING_SECRET` is configured.
+- Local filesystem storage is suitable for development demos; durable deployment storage needs an external mounted or remote-backed path.
 
 ## Screenshots / Demo
 
@@ -228,7 +232,7 @@ The project is configured primarily through environment variables and the OpenCl
 - Live demo: `<ADD_LIVE_DEMO_URL>`
 - Local demo URL: `http://127.0.0.1:3000`
 
-If you do not want broken image links in GitHub, replace the placeholder paths above with real screenshots or remove them.
+Replace the placeholders above with real screenshots or a deployment URL when available.
 
 ## API / CLI Reference
 
@@ -251,7 +255,7 @@ If you do not want broken image links in GitHub, replace the placeholder paths a
 
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
-| `GET` | `/api/health` | Health and storage posture |
+| `GET` | `/api/health` | Health, model, audio, and storage posture |
 | `GET` | `/api/sample-rfp` | Sample RFP text for demos |
 | `GET` | `/api/workspaces` | List known workspaces |
 | `GET` | `/api/status?workspaceId=<id>` | Current workspace snapshot |
@@ -277,7 +281,7 @@ The Slack example maps `(channelId, threadId)` to `./workspaces/proposals/<chann
 Run the automated test suite:
 
 ```bash
-npm run test
+npm test
 ```
 
 Run static type checking:
@@ -286,15 +290,15 @@ Run static type checking:
 npm run typecheck
 ```
 
-Test coverage currently uses the built-in Node `test` runner and includes proposal flows, guardrails, serverless routes, Slack signature verification, idempotency, storage resolution, and coverage regression checks.
+The project uses the built-in Node `test` runner and covers proposal flows, guardrails, serverless routes, storage resolution, Slack signing, idempotency, and coverage regressions.
 
 ## Roadmap
 
-- Add durable remote execution and storage beyond local files or mounted volumes.
-- Replace heuristic requirement coverage with a two-stage retrieval and reranking pipeline.
-- Support richer export formats such as DOCX and PDF.
-- Add richer spoken outputs such as Slack voice updates and multi-voice handoff narration.
-- Add richer Slack thread updates and approval workflows.
+- Add durable remote storage suitable for hosted deployments.
+- Add deployment-ready Vercel configuration for the browser UI and API routes.
+- Support richer export targets such as DOCX and PDF.
+- Improve requirement coverage with stronger retrieval and matching.
+- Expand Slack review, approval, and audit workflows.
 - Align the local runtime scaffold with the exact OpenClaw SDK used in deployment.
 
 ## Contributing
@@ -304,22 +308,28 @@ Contributions are welcome.
 1. Fork the repository.
 2. Create a feature branch.
 3. Make focused changes with tests where appropriate.
-4. Run `npm run test` before opening a pull request.
-5. Open a PR with a clear summary, rationale, and any screenshots for UI changes.
+4. Run `npm test` and `npm run typecheck` before opening a pull request.
+5. Open a pull request with a clear summary, rationale, and screenshots for UI changes when helpful.
 
-Please open issues or pull requests in `<ADD_GITHUB_REPOSITORY_URL>`.
+Issues and pull requests should be opened at:
+
+- Repository: https://github.com/MasteraSnackin/Proposal-Helmsman
+- Issues: https://github.com/MasteraSnackin/Proposal-Helmsman/issues
 
 ## License
 
 License: `<ADD LICENSE TYPE HERE>`
 
-This repository does not currently include a root `LICENSE` file. Add `LICENSE` at the repository root and update this section before publishing publicly.
+Add a root `LICENSE` file and replace the placeholder above before public release.
 
 ## Contact / Support
 
-- Maintainer: `<ADD MAINTAINER NAME>`
-- GitHub: `<ADD_GITHUB_PROFILE_OR_REPOSITORY_URL>`
+- Maintainer: `MasteraSnackin`
+- GitHub: https://github.com/MasteraSnackin
+- Repository: https://github.com/MasteraSnackin/Proposal-Helmsman
 - Website: `<ADD_WEBSITE_URL>`
 - Email: `<ADD_EMAIL_ADDRESS>`
 
-For support, issues, or feature requests, use the repository issue tracker at `<ADD_GITHUB_REPOSITORY_URL>/issues`.
+For support, bug reports, or feature requests, use the issue tracker:
+
+- https://github.com/MasteraSnackin/Proposal-Helmsman/issues

@@ -4,7 +4,7 @@
 
 Proposal Helmsman is a Slack-first AI proposal operations system that helps teams turn raw RFP content into a structured proposal draft. The current implementation is an MVP focused on a single coherent workflow: ingest an RFP, extract and track requirements, plan a proposal structure, draft and revise sections, apply Civic guardrails, and export a combined proposal document.
 
-Architecturally, the system is a lightweight Node.js application with three entry surfaces that share the same core logic: a browser dashboard, a programmatic HTTP API, and a Slack-compatible webhook handler. The design favours a modular runtime over a large platform footprint, so the proposal workflow, guardrails, storage, and transport layers can evolve independently as the product moves from hackathon prototype to production service.
+Architecturally, the system is a lightweight modular monolith implemented in Node.js, with three entry surfaces that share the same core logic: a browser dashboard, a programmatic HTTP API, and a Slack-compatible webhook handler. The design favours a shared runtime and skill layer over early service fragmentation, so the proposal workflow, guardrails, storage, and transport layers can evolve independently as the product moves from hackathon prototype to production service.
 
 ## Key Requirements
 
@@ -38,7 +38,7 @@ flowchart LR
   Skills --> Civic[Civic Guardrails]
 ```
 
-This diagram shows the system context at container level. The important design choice is that all user-facing channels converge on the same operator and skill layer, which keeps behaviour consistent across the dashboard, CLI, API, and Slack entrypoints.
+This diagram shows the system context at container level. The important design choice is that all user-facing channels converge on the same operator and skill layer, which keeps behaviour consistent across the dashboard, CLI, API, and Slack entrypoints while preserving a single source of truth for workspace state.
 
 ## Component Details
 
@@ -354,21 +354,23 @@ The repository supports two practical deployment modes today:
   - Workspace data is stored on the local filesystem under `workspaces/proposals`.
 - **Serverless-style mode**
   - Thin handlers in `api/` reuse the shared proposal API router.
-  - Workspace data can be redirected to a mounted durable path, for example a Modal volume.
+  - Workspace data can be redirected to a mounted durable path, for example a Modal volume or another shared filesystem mount.
 
 ### Environments
 
 | Environment | Purpose | Deployment Style | Storage |
 | --- | --- | --- | --- |
 | `dev` | Local development and demos | Node.js process via `npm run dev` | Local filesystem |
-| `staging` | `<ADD DETAIL HERE>` | Serverless or containerised wrapper | Durable mounted volume or equivalent |
-| `prod` | `<ADD DETAIL HERE>` | Serverless or containerised wrapper | Durable mounted volume or external storage |
+| `staging` | Integration testing, preview validation, and external service smoke checks | Vercel-style serverless handlers or a thin container wrapper | Shared durable filesystem mount or external-backed workspace storage |
+| `prod` | Live proposal operations with controlled external integrations | Serverless handlers or container deployment behind HTTPS routing | Durable shared storage with backup and recovery controls |
 
 ### Deployment Notes
 
 - The codebase is runtime-light and does not currently require containers or Kubernetes.
 - The local OpenClaw-style runtime is embedded in the application rather than deployed as a separate service.
 - The storage abstraction is still filesystem-based, even in hosted scenarios.
+- A hosted Vercel deployment is feasible for the API surface, but durable workspace storage must be externalised because ephemeral function filesystems are not sufficient for proposal state.
+- Static frontend asset serving should be treated as a deploy-time concern separate from workspace persistence and background execution concerns.
 
 ## Scalability & Reliability
 
@@ -393,6 +395,7 @@ The repository supports two practical deployment modes today:
 - Introduce a background job layer for long-running draft and export tasks.
 - Add optimistic concurrency or locking for simultaneous updates to the same workspace.
 - Cache lightweight workspace summaries if the number of workspaces grows materially.
+- Add deployment-specific operational safeguards such as rate limits, queue back-pressure, and workspace retention policies.
 
 ## Security & Compliance
 
@@ -456,4 +459,4 @@ The repository supports two practical deployment modes today:
 - Replace heuristic requirement coverage with a retrieval-and-reranking architecture.
 - Support richer export formats such as DOCX and PDF.
 - Align the operator and agent config with the exact production OpenClaw runtime contract.
-- Add environment-specific deployment definitions for `<ADD CLOUD OR PLATFORM HERE>`.
+- Add environment-specific deployment definitions for Vercel, Modal, or a container-based Node platform.
