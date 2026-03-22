@@ -1,4 +1,4 @@
-import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import {
@@ -266,6 +266,13 @@ type CoverageFeatures = {
   canonicalPhraseSet: Set<string>;
 };
 
+export type PreparedCoverageSection = {
+  fileName: string;
+  chunks: CoverageFeatures[];
+};
+
+const COVERAGE_TOKEN_CACHE = new Map<string, string>();
+
 export const DEFAULT_PROPOSAL_SECTIONS: ProposalSection[] = [
   { name: "Executive Summary", order: 1 },
   { name: "Understanding of Requirements", order: 2 },
@@ -342,6 +349,19 @@ export async function readTextIfExists(filePath: string): Promise<string | undef
   } catch (error) {
     if (isMissingFile(error)) {
       return undefined;
+    }
+
+    throw error;
+  }
+}
+
+export async function pathExists(filePath: string): Promise<boolean> {
+  try {
+    await stat(filePath);
+    return true;
+  } catch (error) {
+    if (isMissingFile(error)) {
+      return false;
     }
 
     throw error;
@@ -578,6 +598,25 @@ export function findRequirementEvidence(
   requirementText: string,
   sections: Array<{ fileName: string; content: string }>,
 ): RequirementCoverageEvidence[] {
+  return findRequirementEvidenceInPreparedSections(
+    requirementText,
+    prepareCoverageSections(sections),
+  );
+}
+
+export function prepareCoverageSections(
+  sections: Array<{ fileName: string; content: string }>,
+): PreparedCoverageSection[] {
+  return sections.map((section) => ({
+    fileName: section.fileName,
+    chunks: splitCoverageChunks(section.content).map((chunk) => buildCoverageFeatures(chunk))
+  }));
+}
+
+export function findRequirementEvidenceInPreparedSections(
+  requirementText: string,
+  sections: PreparedCoverageSection[],
+): RequirementCoverageEvidence[] {
   const requirementFeatures = buildCoverageFeatures(requirementText);
 
   if (
@@ -589,7 +628,7 @@ export function findRequirementEvidence(
 
   return sections
     .map((section) => {
-      const bestMatch = rankSectionCoverage(requirementFeatures, section.content);
+      const bestMatch = rankPreparedSectionCoverage(requirementFeatures, section);
 
       if (!bestMatch || !meetsCoverageThreshold(requirementFeatures, bestMatch)) {
         return undefined;
@@ -724,13 +763,31 @@ function rankSectionCoverage(
   requirement: CoverageFeatures,
   sectionContent: string,
 ): CoverageMatch | undefined {
-  const chunks = splitCoverageChunks(sectionContent);
-  const matches = chunks
-    .map((chunk) => scoreCoverageChunk(requirement, buildCoverageFeatures(chunk)))
-    .filter((match) => match.score > 0)
-    .sort((left, right) => right.score - left.score);
+  return rankPreparedSectionCoverage(requirement, {
+    fileName: "section.md",
+    chunks: splitCoverageChunks(sectionContent).map((chunk) => buildCoverageFeatures(chunk))
+  });
+}
 
-  return matches[0];
+function rankPreparedSectionCoverage(
+  requirement: CoverageFeatures,
+  section: PreparedCoverageSection,
+): CoverageMatch | undefined {
+  let bestMatch: CoverageMatch | undefined;
+
+  for (const chunk of section.chunks) {
+    const match = scoreCoverageChunk(requirement, chunk);
+
+    if (match.score <= 0) {
+      continue;
+    }
+
+    if (!bestMatch || match.score > bestMatch.score) {
+      bestMatch = match;
+    }
+  }
+
+  return bestMatch;
 }
 
 function splitCoverageChunks(content: string): string[] {
@@ -856,14 +913,23 @@ function buildCanonicalPhrases(tokens: string[]): string[] {
 
 function canonicalizeCoverageToken(token: string): string {
   const lowered = token.toLowerCase();
+  const cached = COVERAGE_TOKEN_CACHE.get(lowered);
+
+  if (cached) {
+    return cached;
+  }
+
   const directAlias = COVERAGE_ALIAS_MAP.get(lowered);
 
   if (directAlias) {
+    COVERAGE_TOKEN_CACHE.set(lowered, directAlias);
     return directAlias;
   }
 
   const stemmed = stemCoverageToken(lowered);
-  return COVERAGE_ALIAS_MAP.get(stemmed) ?? stemmed;
+  const canonical = COVERAGE_ALIAS_MAP.get(stemmed) ?? stemmed;
+  COVERAGE_TOKEN_CACHE.set(lowered, canonical);
+  return canonical;
 }
 
 function stemCoverageToken(token: string): string {

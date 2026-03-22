@@ -6,7 +6,8 @@ const state = {
   loading: {
     boot: true,
     workspaces: false,
-    workspace: false
+    workspace: false,
+    operator: false
   },
   activity: [],
   selectedSection: "Executive Summary",
@@ -21,6 +22,26 @@ const state = {
 };
 
 const elements = {};
+const dashboardLockIds = [
+  "new-workspace-button",
+  "confirm-create-button",
+  "workspace-name-input",
+  "rfp-input",
+  "load-sample-button",
+  "parse-button",
+  "plan-button",
+  "refresh-button",
+  "coverage-button",
+  "section-select",
+  "emphasis-input",
+  "draft-button",
+  "revision-input",
+  "revise-button",
+  "download-export-button",
+  "export-button",
+  "focus-popover-toggle",
+  "reset-button"
+];
 
 class RequestError extends Error {
   constructor(
@@ -417,6 +438,13 @@ async function sendOperatorMessage(message, options = {}) {
     return;
   }
 
+  if (state.loading.operator) {
+    notifyOperatorBusy();
+    return undefined;
+  }
+
+  state.loading.operator = true;
+  setDashboardInteractionLocked(true, options.button);
   setBusy(options.button, true, {
     busyLabel: options.busyLabel
   });
@@ -434,11 +462,7 @@ async function sendOperatorMessage(message, options = {}) {
     state.workspace = data.workspace;
     state.workspaces = data.workspaces;
     syncSectionSelection();
-    state.optimistic = {
-      sectionName: "",
-      sectionContent: "",
-      proposalContent: ""
-    };
+    resetOptimisticState();
 
     if (data.agentResult.status === "blocked") {
       showNotice(data.agentResult.reason.join(" "), "error");
@@ -459,17 +483,26 @@ async function sendOperatorMessage(message, options = {}) {
     render();
     return data;
   } catch (error) {
+    resetOptimisticState();
     reportUiError(error, {
       fallback: "The operator request failed.",
       logTitle: "Operator error"
     });
+    render();
     return undefined;
   } finally {
     setBusy(options.button, false);
+    state.loading.operator = false;
+    setDashboardInteractionLocked(false);
   }
 }
 
 async function runParse() {
+  if (state.loading.operator) {
+    notifyOperatorBusy();
+    return;
+  }
+
   const rfpText = elements["rfp-input"].value.trim();
 
   if (!rfpText) {
@@ -485,6 +518,11 @@ async function runParse() {
 }
 
 async function runDraft() {
+  if (state.loading.operator) {
+    notifyOperatorBusy();
+    return;
+  }
+
   const sectionName = elements["section-select"].value || state.selectedSection;
   const emphasis = elements["emphasis-input"].value.trim();
   state.selectedSection = sectionName;
@@ -501,6 +539,11 @@ async function runDraft() {
 }
 
 async function runRevision() {
+  if (state.loading.operator) {
+    notifyOperatorBusy();
+    return;
+  }
+
   const sectionName = elements["section-select"].value || state.selectedSection;
   const instruction = elements["revision-input"].value.trim();
 
@@ -522,6 +565,11 @@ async function runRevision() {
 }
 
 async function runExport() {
+  if (state.loading.operator) {
+    notifyOperatorBusy();
+    return;
+  }
+
   state.optimistic.proposalContent = "Assembling proposal draft...";
   render();
 
@@ -533,6 +581,11 @@ async function runExport() {
 }
 
 async function runDownload() {
+  if (state.loading.operator) {
+    notifyOperatorBusy();
+    return;
+  }
+
   if (!state.workspaceId) {
     showNotice("Create or select a workspace before downloading.", "error");
     return;
@@ -1056,6 +1109,14 @@ function syncSectionSelection() {
   }
 }
 
+function resetOptimisticState() {
+  state.optimistic = {
+    sectionName: "",
+    sectionContent: "",
+    proposalContent: ""
+  };
+}
+
 function showNotice(message, kind = "info") {
   elements["notice-bar"].dataset.message = message;
   elements["notice-bar"].dataset.kind = kind;
@@ -1209,6 +1270,63 @@ function logActivity(title, detail) {
   });
 }
 
+function notifyOperatorBusy() {
+  showNotice("Wait for the current operator action to finish before starting another.", "info");
+  toast("Another operator action is still running.", "error");
+}
+
+function setDashboardInteractionLocked(locked, activeElement) {
+  for (const id of dashboardLockIds) {
+    const control = elements[id];
+
+    if (!control || control === activeElement) {
+      continue;
+    }
+
+    setTemporarilyDisabled(control, locked);
+  }
+
+  const dynamicControls =
+    typeof document.querySelectorAll === "function"
+      ? document.querySelectorAll("[data-workspace-id], [data-draft-section], [data-empty-action]")
+      : [];
+
+  for (const control of dynamicControls) {
+    if (control === activeElement) {
+      continue;
+    }
+
+    setTemporarilyDisabled(control, locked);
+  }
+}
+
+function setTemporarilyDisabled(control, locked) {
+  if (
+    !control ||
+    typeof control !== "object" ||
+    !("disabled" in control) ||
+    !("setAttribute" in control)
+  ) {
+    return;
+  }
+
+  if (locked) {
+    control.dataset = control.dataset || {};
+    control.dataset.temporarilyDisabled = "true";
+    control.disabled = true;
+    control.setAttribute("aria-disabled", "true");
+    return;
+  }
+
+  if (control.dataset?.temporarilyDisabled !== "true") {
+    return;
+  }
+
+  control.disabled = false;
+  control.setAttribute("aria-disabled", "false");
+  delete control.dataset.temporarilyDisabled;
+}
+
 function setBusy(button, busy, options = {}) {
   if (!button) {
     return;
@@ -1292,10 +1410,19 @@ async function fetchJson(url, options = {}) {
     throw toRequestError(response.status, payload);
   }
 
-  if (!isRecord(payload)) {
+  if (!isRecord(payload) || "__rawResponse" in payload) {
     throw new RequestError("Server returned a non-JSON response.", {
       status: response.status,
-      code: "INVALID_RESPONSE"
+      code: "INVALID_RESPONSE",
+      details:
+        isRecord(payload) &&
+        (typeof payload.__rawResponse === "string" || typeof payload.raw === "string")
+          ? {
+              response: extractErrorSnippet(
+                typeof payload.__rawResponse === "string" ? payload.__rawResponse : payload.raw,
+              )
+            }
+          : undefined
     });
   }
 
@@ -1313,13 +1440,25 @@ async function parseResponsePayload(response) {
     return JSON.parse(raw);
   } catch {
     return {
-      raw
+      __rawResponse: raw
     };
   }
 }
 
 function toRequestError(status, payload) {
   if (isRecord(payload)) {
+    const details = isRecord(payload.details) ? { ...payload.details } : {};
+    const rawResponse =
+      typeof payload.__rawResponse === "string"
+        ? extractErrorSnippet(payload.__rawResponse)
+        : typeof payload.raw === "string"
+          ? extractErrorSnippet(payload.raw)
+          : undefined;
+
+    if (rawResponse && typeof details.response !== "string") {
+      details.response = rawResponse;
+    }
+
     const message = typeof payload.error === "string" && payload.error.trim()
       ? payload.error.trim()
       : typeof payload.message === "string" && payload.message.trim()
@@ -1332,7 +1471,7 @@ function toRequestError(status, payload) {
     return new RequestError(message, {
       status,
       code: typeof payload.code === "string" ? payload.code : "REQUEST_ERROR",
-      details: isRecord(payload.details) ? payload.details : undefined,
+      details: Object.keys(details).length > 0 ? details : undefined,
       retryable: payload.retryable === true,
       reasons
     });
@@ -1373,11 +1512,12 @@ function normalizeError(error, fallback) {
     const retryHint = error.retryable ? " You can try again." : "";
     const noticeMessage = `${error.message}${reasonText}${retryHint}`.trim();
     const code = error.code && error.code !== "REQUEST_ERROR" ? ` [${error.code}]` : "";
+    const detailText = summarizeRequestDetails(error.details);
 
     return {
       noticeMessage,
       toastMessage: noticeMessage,
-      logMessage: `${error.message}${code}`
+      logMessage: `${error.message}${code}${detailText}`
     };
   }
 
@@ -1394,6 +1534,64 @@ function normalizeError(error, fallback) {
     toastMessage: fallback,
     logMessage: fallback
   };
+}
+
+function summarizeRequestDetails(details) {
+  if (!isRecord(details)) {
+    return "";
+  }
+
+  const parts = [];
+
+  if (typeof details.service === "string" && details.service.trim()) {
+    parts.push(`service=${details.service.trim()}`);
+  }
+
+  if (typeof details.method === "string" && details.method.trim()) {
+    parts.push(`method=${details.method.trim()}`);
+  }
+
+  if (Array.isArray(details.allowedMethods)) {
+    const allowedMethods = details.allowedMethods.filter(
+      (value) => typeof value === "string" && value.trim(),
+    );
+
+    if (allowedMethods.length > 0) {
+      parts.push(`allowed=${allowedMethods.join(",")}`);
+    }
+  }
+
+  if (typeof details.path === "string" && details.path.trim()) {
+    parts.push(`path=${details.path.trim()}`);
+  }
+
+  if (typeof details.filePath === "string" && details.filePath.trim()) {
+    parts.push(`file=${details.filePath.trim()}`);
+  }
+
+  if (typeof details.target === "string" && details.target.trim()) {
+    parts.push(`target=${details.target.trim()}`);
+  }
+
+  if (typeof details.response === "string" && details.response.trim()) {
+    parts.push(`response=${extractErrorSnippet(details.response)}`);
+  }
+
+  return parts.length > 0 ? ` ${parts.join(" ")}` : "";
+}
+
+function extractErrorSnippet(value, limit = 160) {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+
+  const normalized = value.replace(/\s+/g, " ").trim();
+
+  if (!normalized) {
+    return undefined;
+  }
+
+  return normalized.length > limit ? `${normalized.slice(0, limit)}...` : normalized;
 }
 
 function formatGuardrailNotice(guardrail) {

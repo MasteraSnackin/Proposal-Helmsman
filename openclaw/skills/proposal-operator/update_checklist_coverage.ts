@@ -2,7 +2,8 @@ import { ValidationError } from "../../runtime/errors.ts";
 import type { SkillContext } from "../../runtime/types.ts";
 import {
   ensureWorkspace,
-  findRequirementEvidence,
+  findRequirementEvidenceInPreparedSections,
+  prepareCoverageSections,
   readAllSectionContents,
   readRfpDocument,
   requireWorkspacePath,
@@ -32,9 +33,13 @@ export async function run(
   }
 
   const sectionContents = await readAllSectionContents(workspacePath);
+  const preparedSections = prepareCoverageSections(sectionContents);
 
   const updatedRequirements = rfp.requirements.map((requirement) => {
-    const evidence = findRequirementEvidence(requirement.text, sectionContents);
+    const evidence = findRequirementEvidenceInPreparedSections(
+      requirement.text,
+      preparedSections,
+    );
 
     return {
       ...requirement,

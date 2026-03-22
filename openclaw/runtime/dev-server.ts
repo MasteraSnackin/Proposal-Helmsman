@@ -5,7 +5,13 @@ import { fileURLToPath } from "node:url";
 
 import { dispatchProposalApiRequest } from "../../backend/proposal-api.ts";
 import { resolveWorkspaceStorageConfig } from "../../backend/storage-config.ts";
-import { toApplicationError, toErrorPayload } from "./errors.ts";
+import {
+  ForbiddenError,
+  MethodNotAllowedError,
+  NotFoundError,
+  toApplicationError,
+  toErrorPayload
+} from "./errors.ts";
 
 type DevServerOptions = {
   host?: string;
@@ -104,9 +110,15 @@ export async function dispatchDevRequest(
       return await serveStaticAsset(url.pathname, paths.publicRoot);
     }
 
-    return jsonResponse(405, {
-      error: `Method not allowed: ${method}`
-    });
+    return jsonResponse(
+      405,
+      toErrorPayload(
+        new MethodNotAllowedError(method, {
+          path: url.pathname,
+          allowedMethods: ["GET"]
+        }),
+      ),
+    );
   } catch (error) {
     const applicationError = toApplicationError(error);
     return jsonResponse(applicationError.statusCode, toErrorPayload(applicationError));
@@ -148,9 +160,15 @@ async function handleRequest(
 
     sendDevResponse(
       response,
-      jsonResponse(405, {
-        error: `Method not allowed: ${method}`
-      }),
+      jsonResponse(
+        405,
+        toErrorPayload(
+          new MethodNotAllowedError(method, {
+            path: url.pathname,
+            allowedMethods: ["GET"]
+          }),
+        ),
+      ),
     );
   } catch (error) {
     const applicationError = toApplicationError(error);
@@ -253,7 +271,9 @@ async function serveStaticAsset(
     filePath !== path.resolve(publicRoot) &&
     !filePath.startsWith(`${path.resolve(publicRoot)}${path.sep}`)
   ) {
-    return jsonResponse(403, { error: "Forbidden." });
+    return jsonResponse(403, toErrorPayload(new ForbiddenError("Forbidden.", {
+      path: pathname
+    })));
   }
 
   try {
@@ -264,7 +284,9 @@ async function serveStaticAsset(
       body: content
     };
   } catch {
-    return jsonResponse(404, { error: "Not found." });
+    return jsonResponse(404, toErrorPayload(new NotFoundError("Not found.", {
+      path: pathname
+    })));
   }
 }
 

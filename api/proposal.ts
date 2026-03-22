@@ -1,9 +1,21 @@
-import { routeProposalApi, runtime } from "./_shared.ts";
+import {
+  createOptionsHandler,
+  createRouteHandler,
+  routeProposalApi,
+  runtime
+} from "./_shared.ts";
 
 export { runtime };
+const pathname = "/api/proposal";
+const allowedMethods = ["GET"];
 
 export async function GET(request: Request): Promise<Response> {
-  return await routeProposalApi(request, "/api/proposal");
+  return await routeProposalApi(request, pathname);
 }
 
-export default GET;
+export const OPTIONS = createOptionsHandler(allowedMethods);
+
+export default createRouteHandler(pathname, {
+  GET,
+  OPTIONS
+});

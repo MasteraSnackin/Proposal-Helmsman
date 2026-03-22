@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
+  MethodNotAllowedError,
   NotFoundError,
   ValidationError,
   toApplicationError,
@@ -166,7 +167,22 @@ async function processProposalApiRoute(
   body: Record<string, unknown>,
   paths: ResolvedProposalApiPaths,
 ): Promise<Response> {
-  if (method === "GET" && url.pathname === "/api/health") {
+  const allowedMethods = allowedMethodsForPath(url.pathname);
+
+  if (!allowedMethods) {
+    throw new NotFoundError("API route not found.", {
+      path: url.pathname
+    });
+  }
+
+  if (!allowedMethods.includes(method)) {
+    throw new MethodNotAllowedError(method, {
+      path: url.pathname,
+      allowedMethods
+    });
+  }
+
+  if (url.pathname === "/api/health") {
     return jsonResponse(200, {
       ok: true,
       model: getModelClientInfo(),
@@ -190,7 +206,7 @@ async function processProposalApiRoute(
     });
   }
 
-  if (method === "GET" && url.pathname === "/api/sample-rfp") {
+  if (url.pathname === "/api/sample-rfp") {
     const rfpText = await readFile(paths.sampleRfpPath, "utf8");
     return jsonResponse(200, { rfpText });
   }
@@ -216,7 +232,7 @@ async function processProposalApiRoute(
     });
   }
 
-  if (method === "POST" && url.pathname === "/api/reset") {
+  if (url.pathname === "/api/reset") {
     const workspaceId = requireWorkspaceId(body.workspaceId);
     const workspacePath = getWorkspacePath(paths.workspaceRoot, workspaceId);
 
@@ -230,14 +246,14 @@ async function processProposalApiRoute(
     });
   }
 
-  if (method === "GET" && url.pathname === "/api/status") {
+  if (url.pathname === "/api/status") {
     const workspaceId = requireWorkspaceId(url.searchParams.get("workspaceId"));
     return jsonResponse(200, {
       workspace: await getWorkspacePayload(paths.workspaceRoot, workspaceId)
     });
   }
 
-  if (method === "GET" && url.pathname === "/api/proposal") {
+  if (url.pathname === "/api/proposal") {
     const workspaceId = requireWorkspaceId(url.searchParams.get("workspaceId"));
     const workspace = await getWorkspacePayload(paths.workspaceRoot, workspaceId);
 
@@ -268,7 +284,7 @@ async function processProposalApiRoute(
     });
   }
 
-  if (method === "POST" && url.pathname === "/api/message") {
+  if (url.pathname === "/api/message") {
     const workspaceId = requireWorkspaceId(body.workspaceId);
 
     if (typeof body.message !== "string" || !body.message.trim()) {
@@ -312,9 +328,27 @@ async function processProposalApiRoute(
     });
   }
 
-  return jsonResponse(405, {
-    error: `Method not allowed: ${method}`
+  throw new NotFoundError("API route not found.", {
+    path: url.pathname
   });
+}
+
+function allowedMethodsForPath(pathname: string): string[] | undefined {
+  switch (pathname) {
+    case "/api/health":
+    case "/api/sample-rfp":
+    case "/api/status":
+    case "/api/proposal":
+      return ["GET"];
+    case "/api/message":
+    case "/api/reset":
+      return ["POST"];
+    case "/api/workspaces":
+    case "/api/audio":
+      return ["GET", "POST"];
+    default:
+      return undefined;
+  }
 }
 
 export async function listWorkspaces(workspaceRoot: string): Promise<WorkspaceCard[]> {

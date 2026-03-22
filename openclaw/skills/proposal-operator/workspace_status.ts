@@ -1,12 +1,12 @@
 import type { SkillContext } from "../../runtime/types.ts";
 import {
+  pathExists,
   PROPOSAL_MD_FILE,
   ensureWorkspace,
   listSectionFiles,
   proposalSectionFile,
   readProposalStructure,
   readRfpDocument,
-  readTextIfExists,
   requireWorkspacePath,
   workspaceFilePath,
   type WorkspaceStatusSnapshot
@@ -50,9 +50,7 @@ export async function run(
     summary: rfp?.summary ?? "",
     requirements: rfp?.requirements ?? [],
     sections,
-    proposalExists: Boolean(
-      await readTextIfExists(workspaceFilePath(workspacePath, PROPOSAL_MD_FILE)),
-    )
+    proposalExists: await pathExists(workspaceFilePath(workspacePath, PROPOSAL_MD_FILE))
   };
 }
 

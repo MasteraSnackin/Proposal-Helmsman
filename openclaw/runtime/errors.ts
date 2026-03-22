@@ -70,6 +70,19 @@ export class ForbiddenError extends ApplicationError {
   }
 }
 
+export class MethodNotAllowedError extends ApplicationError {
+  constructor(method: string, details?: ErrorDetails) {
+    super(`Method not allowed: ${method}`, {
+      code: "METHOD_NOT_ALLOWED",
+      statusCode: 405,
+      details: {
+        method,
+        ...(details ?? {})
+      }
+    });
+  }
+}
+
 export class ConfigurationError extends ApplicationError {
   constructor(message: string, details?: ErrorDetails) {
     super(message, {

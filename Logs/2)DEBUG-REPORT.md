@@ -2,70 +2,70 @@
 
 ## Problem
 
-- Observed behavior: successful guardrail rewrites were surfaced inconsistently.
-- Expected behavior: when guardrails sanitize risky content but still allow the action, the top-level operator/API response should explicitly say so.
+- Observed behavior: failed operator requests could leave stale optimistic draft/export placeholders visible in the UI, and the dashboard still allowed overlapping operator actions while one request was in flight.
+- Expected behavior: if an operator request fails, the UI should clear any optimistic placeholder and rerender the real workspace state alongside the error notice, and it should prevent another operator action from starting until the current one finishes.
 - Actual behavior:
-  - Risky revisions were already surfaced correctly through top-level `agentResult.guardrail`.
-  - Risky exports were sanitized, but only the nested skill result carried metadata, so the top-level response looked like an untouched success.
-- Scope: consistent for successful export sanitization; blocked requests were already correct.
+  - `runDraft`, `runRevision`, and `runExport` set optimistic placeholder content before the request.
+  - On request failure, the error path showed a notice and toast, but it did not clear `state.optimistic` or rerender the previews.
+  - That left the section or proposal preview stuck on "Applying revision safely..." or "Assembling proposal draft..." even though the action had failed.
+  - Only the clicked action button entered a busy state, so another operator action could still be triggered before the first request settled.
+- Scope: consistent for operator-request failures in the draft, revise, and export flows, with overlapping-action races possible from the UI whenever a dependent action was triggered too quickly.
 
 ## Environment Notes
 
-- No `.git` repository is present in this workspace, so recent git history could not be inspected.
-- No GUI browser agent was available in this terminal environment, so validation used direct runtime/API reproductions and automated tests rather than screenshots or videos.
+- Recent git history was inspected. The only recent commit was documentation-only: `e87124b docs: refresh README and architecture guide`.
+- No GUI browser agent is available in this terminal environment, so validation used a targeted UI harness plus the existing automated test suite instead of screenshots or videos.
 
 ## Hypotheses
 
-1. The export skill is sanitizing risky output correctly, but the runtime is dropping the intervention metadata before returning the operator result.
-2. The export skill never records `modify` decisions, so there is nothing for the runtime/UI to surface.
-3. The UI receives the metadata but ignores it.
+1. `sendOperatorMessage(...)` handles errors without clearing optimistic UI state or rerendering the preview panes.
+2. The preview renderers keep preferring optimistic state even after the request fails because nothing invalidates it.
+3. The request state is tracked per button instead of per operator workflow, so overlapping actions can race each other.
 
 ## Root Cause
 
-- Hypothesis 1 was correct.
-- The export path already sanitized risky proposal output, but the metadata shape coming back from the skill did not get normalized into the top-level `guardrail` field that the UI already knows how to display.
-- This left the contract inconsistent:
-  - revise: top-level `guardrail` metadata available
-  - export: only nested skill metadata available
+- Hypotheses 1 and 3 were correct.
+- The UI had two request-state gaps in [web/app.js](/Users/darkcomet/Documents/Hackathon/Proposal%20Helmsman/web/app.js):
+  - optimistic placeholders were only cleared on successful operator responses
+  - request locking only applied to the clicked button, not to the wider operator workflow
+- In the error path inside `sendOperatorMessage(...)`, the UI called `reportUiError(...)` and returned, but never reset `state.optimistic` and never called `render()`.
+- Separately, because other operator controls remained interactive during an in-flight request, a second action could be triggered against stale workspace state before the first write completed.
 
 ## Execution Flow
 
-1. `invokeProposalOperator("/export")` calls `exportProposal`.
-2. `exportProposal` compiles proposal markdown and runs `guardOutput(...)`.
-3. Mock Civic returns `decision: "modify"` for risky phrases such as `unlimited liability` and `100% uptime`.
-4. The exported markdown is sanitized correctly.
-5. Before the fix, the top-level operator result still returned a plain success message with no `guardrail` summary, so the UI had nothing consistent to surface.
+1. `runDraft()`, `runRevision()`, or `runExport()` writes optimistic preview text into `state.optimistic` and calls `render()`.
+2. `sendOperatorMessage(...)` starts the API request.
+3. If `fetchJson(...)` throws, the `catch` block reports the UI error but previously did not reset optimistic state.
+4. The preview panes therefore kept rendering the old optimistic content instead of the last real workspace content or empty state.
+5. While that request is still in flight, other operator controls were previously still clickable, so a fast follow-up action could race the first request and hit stale server state.
 
 ## Fix Applied
 
-- Added normalization in [openclaw/runtime/proposal-operator.ts](/Users/darkcomet/Documents/Hackathon/Proposal%20Helmsman/openclaw/runtime/proposal-operator.ts) so successful skill-level guardrail rewrites are promoted into the top-level operator `guardrail` field.
-- Preserved nested guardrail metadata in [openclaw/skills/proposal-operator/draft_section.ts](/Users/darkcomet/Documents/Hackathon/Proposal%20Helmsman/openclaw/skills/proposal-operator/draft_section.ts) and [openclaw/skills/proposal-operator/export_proposal.ts](/Users/darkcomet/Documents/Hackathon/Proposal%20Helmsman/openclaw/skills/proposal-operator/export_proposal.ts).
-- Added regression coverage in [openclaw/tests/proposal-operator.test.ts](/Users/darkcomet/Documents/Hackathon/Proposal%20Helmsman/openclaw/tests/proposal-operator.test.ts) and [openclaw/tests/dev-server.test.ts](/Users/darkcomet/Documents/Hackathon/Proposal%20Helmsman/openclaw/tests/dev-server.test.ts).
+- Added `resetOptimisticState()` in [web/app.js](/Users/darkcomet/Documents/Hackathon/Proposal%20Helmsman/web/app.js) and reused it after successful operator responses.
+- Updated the `sendOperatorMessage(...)` failure path in [web/app.js](/Users/darkcomet/Documents/Hackathon/Proposal%20Helmsman/web/app.js) to:
+  - clear optimistic state
+  - report the error
+  - rerender the UI
+- Added `notifyOperatorBusy()` plus `setDashboardInteractionLocked(...)` in [web/app.js](/Users/darkcomet/Documents/Hackathon/Proposal%20Helmsman/web/app.js) so parse/plan/coverage/draft/revise/export and related dashboard controls are temporarily disabled while an operator request is running.
+- Added regression coverage in [openclaw/tests/web-app.test.ts](/Users/darkcomet/Documents/Hackathon/Proposal%20Helmsman/openclaw/tests/web-app.test.ts) to verify that failed operator requests clear optimistic placeholders and rerender the UI.
 
 ## Validation
 
-- Reproduced guarded revise path:
-  - `/revise Executive Summary::Revise this so we accept unlimited liability and guarantee 100% uptime.`
-  - Result returns `status: "ok"` plus top-level `guardrail.modified: true`.
-- Reproduced guarded export path before the fix:
-  - Workspace section seeded with `We accept unlimited liability and guarantee 100% uptime.`
-  - `/export` sanitized the proposal, but only nested `result.guardrails` was present.
-- Reproduced guarded export path after the fix:
-  - Result now returns:
-    - `message: "Proposal exported. Guardrails adjusted risky wording."`
-    - `guardrail.modified: true`
-    - `guardrail.stages: ["output"]`
-    - `guardrail.reasons: ["Do not promise unlimited liability.", "Do not invent hard uptime guarantees."]`
 - `npm run typecheck`: passed
-- `npm test`: passed (`20/20`)
+- `npm test`: passed (`21/21`)
+- New regression test confirms:
+  - optimistic section/proposal placeholders are cleared on request failure
+  - the UI rerenders after the failure
+  - the notice, toast, and activity log still reflect the request error
+- Live local bundle verification confirmed the updated UI now serves `resetOptimisticState()`, `notifyOperatorBusy()`, and `setDashboardInteractionLocked(...)`.
 
 ## Related Areas To Monitor
 
-- Serverless API routes reuse the same operator result contract and should stay aligned as more guarded skills are added.
-- Any new skill that can return `allow`, `block`, or `modify` should either emit top-level metadata directly or be normalized centrally in the runtime.
+- Any future UI flow that preloads optimistic content should use the same reset path on failures.
+- Download and workspace-management flows already use separate handlers; if they add optimistic rendering or async chaining later, they should follow the same failure-reset and request-lock pattern.
 
 ## Preventive Measures
 
-- Treat `modify` as a first-class contract state, not just an internal implementation detail.
-- Keep nested skill metadata and top-level API/UI metadata aligned through one normalization step.
-- Add regression tests whenever a workflow can succeed with sanitized content rather than only fail closed.
+- Treat optimistic UI state as transactional: set it before the request, then always clear it on both success and failure.
+- Treat operator requests as a single in-flight workflow, not as isolated button states, when actions depend on shared workspace files.
+- Keep small UI-state regression tests near the existing Node test suite when browser automation is unavailable.

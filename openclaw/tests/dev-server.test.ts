@@ -158,6 +158,42 @@ test("dev server returns structured validation errors for bad operator requests"
   assert.match(payload.error, /message/i);
 });
 
+test("dev server classifies missing routes and wrong methods with structured errors", async () => {
+  const workspaceRoot = await mkdtemp(path.join(tmpdir(), "proposal-helmsman-ui-"));
+
+  const missingRoute = await dispatchDevRequest(
+    {
+      method: "GET",
+      url: "/api/unknown"
+    },
+    {
+      workspaceRoot
+    },
+  );
+
+  assert.equal(missingRoute.statusCode, 404);
+  const missingPayload = JSON.parse(missingRoute.body.toString());
+  assert.equal(missingPayload.code, "NOT_FOUND");
+  assert.equal(missingPayload.details.path, "/api/unknown");
+
+  const wrongMethod = await dispatchDevRequest(
+    {
+      method: "PATCH",
+      url: "/api/health"
+    },
+    {
+      workspaceRoot
+    },
+  );
+
+  assert.equal(wrongMethod.statusCode, 405);
+  const wrongMethodPayload = JSON.parse(wrongMethod.body.toString());
+  assert.equal(wrongMethodPayload.code, "METHOD_NOT_ALLOWED");
+  assert.equal(wrongMethodPayload.details.method, "PATCH");
+  assert.deepEqual(wrongMethodPayload.details.allowedMethods, ["GET"]);
+  assert.equal(wrongMethodPayload.details.path, "/api/health");
+});
+
 test("dev server preserves guardrail modification metadata on successful revisions", async () => {
   const workspaceRoot = await mkdtemp(path.join(tmpdir(), "proposal-helmsman-ui-"));
   const created = await dispatchJson(
